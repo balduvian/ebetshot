@@ -26,8 +26,6 @@ const loadProperties = (properties: Property<any>[]) => {
 	});
 
 	return chrome.storage.sync.get(queryObject).then((resultObject) => {
-		console.log(resultObject);
-
 		for (const [key, value] of Object.entries(resultObject)) {
 			const belonging = properties.find(
 				(property) => property.name === key
@@ -48,6 +46,7 @@ const createCheckOption = (name: string, property: Property<boolean>) => {
 	const check = document.createElement('input');
 	check.type = 'checkbox';
 	check.checked = property.value;
+	check.id = property.name;
 	check.onchange = () => property.set(check.checked);
 
 	container.appendChild(check);
@@ -148,14 +147,20 @@ const resetProperties = (properties: Property<any>[]) => {
 		property.set(property.defaultValue());
 
 		const element = document.getElementById(property.name);
-		if (element instanceof HTMLInputElement) element.value = property.value;
+		if (element instanceof HTMLInputElement) {
+			if (element.type === 'checkbox') {
+				element.checked = property.value;
+			} else {
+				element.value = property.value;
+			}
+		}
 	});
 };
 
 const SHOW_PROPERTY = new Property('show', () => true);
 const FIX_PROPERTY = new Property('fix', () => true);
-const ASPECTW_PROPERTY = new Property('aspecth', () => 16);
-const ASPECTH_PROPERTY = new Property('aspectw', () => 9);
+const ASPECTW_PROPERTY = new Property('aspectw', () => 16);
+const ASPECTH_PROPERTY = new Property('aspecth', () => 9);
 const SCALE_PROPERTY = new Property('scale', () => 38);
 
 const FINALW_PROPERTY = new Property('c_finalw', () =>

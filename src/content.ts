@@ -4,9 +4,6 @@ var globalStream: MediaStream | undefined = undefined;
 var globalFakeVideo: HTMLVideoElement | undefined = undefined;
 var globalFakeCanvas: HTMLCanvasElement | undefined = undefined;
 
-const SCREENSHOT_WIDTH = 608;
-const SCREENSHOT_HEIGHT = 342;
-
 const initCanvas = () => {
 	if (globalFakeCanvas === undefined) {
 		globalFakeCanvas = document.createElement('canvas');
@@ -163,6 +160,18 @@ const getBounds = (
 	}
 };
 
+const getStoredWidthHeight = (): Promise<[number, number] | undefined> =>
+	chrome.storage.sync
+		.get({ fix: true, aspectw: 16, aspecth: 9, scale: 38 })
+		.then((results) =>
+			results.fix
+				? [
+						results.aspectw * results.scale,
+						results.aspecth * results.scale,
+				  ]
+				: undefined
+		);
+
 const videoToClipboard = async (
 	video: HTMLVideoElement,
 	captureWidth: number,
@@ -172,13 +181,17 @@ const videoToClipboard = async (
 	const context =
 		fakeCanvas.getContext('2d') ?? funErr('context could not be created');
 
-	fakeCanvas.width = SCREENSHOT_WIDTH;
-	fakeCanvas.height = SCREENSHOT_HEIGHT;
+	const stored = await getStoredWidthHeight();
+	const [screenshotWidth, screenshotHeight] =
+		stored === undefined ? [captureWidth, captureHeight] : stored;
+
+	fakeCanvas.width = screenshotWidth;
+	fakeCanvas.height = screenshotHeight;
 
 	const [x, y, w, h] = getBounds(
 		captureWidth,
 		captureHeight,
-		SCREENSHOT_WIDTH / SCREENSHOT_HEIGHT
+		screenshotWidth / screenshotHeight
 	);
 	context.drawImage(
 		video,
@@ -188,8 +201,8 @@ const videoToClipboard = async (
 		h,
 		0,
 		0,
-		SCREENSHOT_WIDTH,
-		SCREENSHOT_HEIGHT
+		screenshotWidth,
+		screenshotHeight
 	);
 
 	const blob = await getBlob(fakeCanvas);
@@ -205,7 +218,7 @@ const captureScreenshotCrossSite = async (video: HTMLVideoElement) => {
 	const oldStyle = setVideoStyle(video);
 
 	try {
-		await Promise.all([fakeVideo.play(), wait(100)]);
+		await Promise.all([fakeVideo.play(), wait(250)]);
 
 		/* scale by how much the video capture coordinates differ from screen coordinates */
 		return videoToClipboard(
