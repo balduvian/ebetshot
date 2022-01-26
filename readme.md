@@ -21,3 +21,11 @@ In the top right hand corner, enable the toggle for "Developer mode." Now 3 more
 Click on "Load unpacked" and navigate the the extracted folder. Then click "Select Folder."
 
 Ebetshot should now appear in your extensions list!
+
+## Note for Netflix
+
+Netflix tries to prevent screenshotting. To get around this, the extension will instead ask for you to share your screen. For the best results, please choose "Chrome Tab" then find the tab the video is on in the screen share popup. When screenshotting in this mode, clicking the button will make the video fill up the entire window for a split second.
+
+(The screnshot button is also in a different place on Netflix so that it doesn't get blocked by the flag button)
+
+This mode is also used when videos come from a cross origin site. An example is https://www.languagereactor.com/, where the videos come from Youtube.

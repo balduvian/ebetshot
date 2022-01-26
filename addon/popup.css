@@ -11,7 +11,8 @@ input {
 }
 
 div > p,
-div > input {
+div > input,
+div > button {
 	display: inline-block;
 	margin-left: 5px;
 }
