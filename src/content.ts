@@ -1,4 +1,4 @@
-console.log("working...");
+console.log('working...');
 
 var globalStream: MediaStream | undefined = undefined;
 var globalFakeVideo: HTMLVideoElement | undefined = undefined;
@@ -9,7 +9,7 @@ const SCREENSHOT_HEIGHT = 342;
 
 const initCanvas = () => {
 	if (globalFakeCanvas === undefined) {
-		globalFakeCanvas = document.createElement("canvas");
+		globalFakeCanvas = document.createElement('canvas');
 	}
 };
 
@@ -23,7 +23,7 @@ const getFakeVideo = async () => {
 		})
 		.then((stream) => {
 			globalStream = stream;
-			globalFakeVideo = document.createElement("video");
+			globalFakeVideo = document.createElement('video');
 			globalFakeVideo.srcObject = globalStream;
 
 			return globalFakeVideo;
@@ -42,7 +42,7 @@ const getBlob = (canvas: HTMLCanvasElement) =>
 	);
 
 const moveVideo = (video: HTMLVideoElement) => {
-	const parent = video.parentElement ?? funErr("video has no parent");
+	const parent = video.parentElement ?? funErr('video has no parent');
 	document.body.insertBefore(video, document.body.firstChild);
 
 	return parent;
@@ -56,14 +56,14 @@ const setVideoStyle = (video: HTMLVideoElement) => {
 	video.controls = false;
 	const oldStyle = Object.assign({}, video.style);
 
-	video.style.zIndex = "9999999";
-	video.style.position = "fixed";
-	video.style.left = "0";
-	video.style.top = "0";
-	video.style.width = "100%";
-	video.style.height = "auto";
-	video.style.cursor = "none";
-	video.style.transform = "none";
+	video.style.zIndex = '9999999';
+	video.style.position = 'fixed';
+	video.style.left = '0';
+	video.style.top = '0';
+	video.style.width = '100%';
+	video.style.height = 'auto';
+	video.style.cursor = 'none';
+	video.style.transform = 'none';
 
 	return oldStyle;
 };
@@ -84,18 +84,18 @@ const resetVideoStyle = (
 };
 
 const createButton = () => {
-	const button = document.createElement("button");
-	button.style.backgroundColor = "rgba(0, 0, 0, 0.4)";
-	button.style.padding = "5px";
-	button.style.zIndex = "100";
-	button.textContent = "📷";
-	button.style.right = "0";
+	const button = document.createElement('button');
+	button.style.backgroundColor = 'rgba(0, 0, 0, 0.4)';
+	button.style.padding = '5px';
+	button.style.zIndex = '100';
+	button.textContent = '📷';
+	button.style.right = '0';
 	button.style.position =
-		window.location.hostname === "www.netflix.com" ? "fixed" : "absolute";
+		window.location.hostname === 'www.netflix.com' ? 'fixed' : 'absolute';
 	button.style.top =
-		window.location.hostname === "www.netflix.com" ? "50%" : "0";
+		window.location.hostname === 'www.netflix.com' ? '50%' : '0';
 
-	button.dataset.ebetshot = "b";
+	button.dataset.ebetshot = 'b';
 
 	return button;
 };
@@ -108,7 +108,7 @@ const applyToVideo = (element: Node) => {
 	initCanvas();
 
 	const container =
-		element.parentNode ?? funErr("video does not have a container");
+		element.parentNode ?? funErr('video does not have a container');
 
 	([...container.children] as HTMLElement[]).forEach((element) => {
 		if (element.dataset.ebetshot) element.remove();
@@ -116,23 +116,23 @@ const applyToVideo = (element: Node) => {
 
 	const button = createButton();
 	button.onclick = (event) => {
-		console.log("button clicked...");
+		console.log('button clicked...');
 		event.stopPropagation();
 
 		const video =
-			container.querySelector("video") ??
-			funErr("video was removed somehow");
+			container.querySelector('video') ??
+			funErr('video was removed somehow');
 
 		(video.src.includes(window.location.hostname) &&
-			window.location.hostname !== "www.netflix.com"
+			window.location.hostname !== 'www.netflix.com'
 			? captureScreenshotSameSite
 			: captureScreenshotCrossSite)(
-			container.querySelector("video") ??
-				funErr("video was removed somehow")
+			container.querySelector('video') ??
+				funErr('video was removed somehow')
 		)
 			.then((blob) => {
 				console.log(blob);
-				console.log("screenshot copied to clipboard!");
+				console.log('screenshot copied to clipboard!');
 			})
 			.catch((err) => {
 				console.log(`could not screenshot because ${err}`);
@@ -168,9 +168,9 @@ const videoToClipboard = async (
 	captureWidth: number,
 	captureHeight: number
 ) => {
-	const fakeCanvas = globalFakeCanvas ?? funErr("fake canvas not found");
+	const fakeCanvas = globalFakeCanvas ?? funErr('fake canvas not found');
 	const context =
-		fakeCanvas.getContext("2d") ?? funErr("context could not be created");
+		fakeCanvas.getContext('2d') ?? funErr('context could not be created');
 
 	fakeCanvas.width = SCREENSHOT_WIDTH;
 	fakeCanvas.height = SCREENSHOT_HEIGHT;
@@ -228,7 +228,7 @@ const observer = new MutationObserver((mutations) => {
 	for (const mutation of mutations) {
 		for (const added of mutation.addedNodes.values()) {
 			const seekChildren = (node: Node) => {
-				if (node.nodeName === "VIDEO") {
+				if (node.nodeName === 'VIDEO') {
 					applyToVideo(node);
 				} else {
 					for (const child of node.childNodes.values()) {
@@ -248,7 +248,7 @@ observer.observe(document.body, {
 	subtree: true,
 });
 
-const videos = document.getElementsByTagName("video");
+const videos = document.getElementsByTagName('video');
 
 console.log(`found ${videos.length} videos initally`);
 

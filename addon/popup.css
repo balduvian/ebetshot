@@ -1,0 +1,26 @@
+div {
+	width: 200px;
+	margin-bottom: 5px;
+	display: block;
+	position: relative;
+}
+
+input {
+	width: 40px;
+	position: relative;
+}
+
+div > p,
+div > input {
+	display: inline-block;
+	margin-left: 5px;
+}
+
+p {
+	font-size: 12px;
+	font-weight: bold;
+}
+
+.reminder {
+	font-weight: revert;
+}
