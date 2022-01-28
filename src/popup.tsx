@@ -118,9 +118,14 @@ class Popup extends preact.Component<{}, PopupState> {
 								type="number"
 								value={this.state[variableName]}
 								onChange={event => {
+									const rawValue = +event.currentTarget.value;
+									const cleanValue =
+										Number.isNaN(rawValue) || rawValue < 1
+											? 1
+											: Math.floor(rawValue);
+
 									this.setState({
-										[variableName]:
-											+event.currentTarget.value,
+										[variableName]: cleanValue,
 									});
 								}}
 								disabled={disabled}
