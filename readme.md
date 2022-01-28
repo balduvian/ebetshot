@@ -6,7 +6,13 @@ A video screenshot extension for Chrome.
 
 Bug me on discord if you encounter any issues.
 
-## How to Install
+## Get the Chrome Extension
+
+You can easily download Ebetshot from the Chrome Web Store at this link: https://chrome.google.com/webstore/detail/ebetshot-%EC%97%90%EB%B2%B3%EC%85%A7/imhioeojmeppiofbppalcignahcckijc
+
+## Manual Installation
+
+Want to use a prerelease version of Ebetshot before it's available on the Chrome Web Store?
 
 Click on Releases tab on the right or just follow the link https://github.com/balduvian/ebetshot/releases.
 
