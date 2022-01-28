@@ -1,3 +1,5 @@
+import * as shared from './shared';
+
 console.log('working...');
 
 var globalStream: MediaStream | undefined = undefined;
@@ -18,7 +20,7 @@ const getFakeVideo = async () => {
 			audio: false,
 			video: true,
 		})
-		.then((stream) => {
+		.then(stream => {
 			globalStream = stream;
 			globalFakeVideo = document.createElement('video');
 			globalFakeVideo.srcObject = globalStream;
@@ -28,14 +30,14 @@ const getFakeVideo = async () => {
 };
 
 const wait = (millis: number) =>
-	new Promise<void>((resolve) => setTimeout(resolve, millis));
+	new Promise<void>(resolve => setTimeout(resolve, millis));
 
 const getBlob = (canvas: HTMLCanvasElement) =>
 	new Promise<Blob>((resolve, reject) =>
-		canvas.toBlob((blob) => {
+		canvas.toBlob(blob => {
 			if (blob === null) return void reject();
 			resolve(blob);
-		})
+		}),
 	);
 
 const moveVideo = (video: HTMLVideoElement) => {
@@ -67,7 +69,7 @@ const setVideoStyle = (video: HTMLVideoElement) => {
 
 const resetVideoStyle = (
 	video: HTMLVideoElement,
-	oldStyle: CSSStyleDeclaration
+	oldStyle: CSSStyleDeclaration,
 ) => {
 	video.controls = true;
 	video.style.zIndex = oldStyle.zIndex;
@@ -107,12 +109,12 @@ const applyToVideo = (element: Node) => {
 	const container =
 		element.parentNode ?? funErr('video does not have a container');
 
-	([...container.children] as HTMLElement[]).forEach((element) => {
+	([...container.children] as HTMLElement[]).forEach(element => {
 		if (element.dataset.ebetshot) element.remove();
 	});
 
 	const button = createButton();
-	button.onclick = (event) => {
+	button.onclick = event => {
 		console.log('button clicked...');
 		event.stopPropagation();
 
@@ -125,13 +127,13 @@ const applyToVideo = (element: Node) => {
 			? captureScreenshotSameSite
 			: captureScreenshotCrossSite)(
 			container.querySelector('video') ??
-				funErr('video was removed somehow')
+				funErr('video was removed somehow'),
 		)
-			.then((blob) => {
+			.then(blob => {
 				console.log(blob);
 				console.log('screenshot copied to clipboard!');
 			})
-			.catch((err) => {
+			.catch(err => {
 				console.log(`could not screenshot because ${err}`);
 			});
 	};
@@ -143,7 +145,7 @@ const applyToVideo = (element: Node) => {
 const getBounds = (
 	baseW: number,
 	baseH: number,
-	targetRatio: number
+	targetRatio: number,
 ): [number, number, number, number] => {
 	const baseRatio = baseW / baseH;
 
@@ -161,21 +163,17 @@ const getBounds = (
 };
 
 const getStoredWidthHeight = (): Promise<[number, number] | undefined> =>
-	chrome.storage.sync
-		.get({ fix: true, aspectw: 16, aspecth: 9, scale: 38 })
-		.then((results) =>
-			results.fix
-				? [
-						results.aspectw * results.scale,
-						results.aspecth * results.scale,
-				  ]
-				: undefined
-		);
+	chrome.storage.sync.get(shared.defaultStorage()).then(results => {
+		const storage = results as shared.ChromeStorage;
+		return storage.fix
+			? [storage.aspectW * storage.scale, storage.aspectH * storage.scale]
+			: undefined;
+	});
 
 const videoToClipboard = async (
 	video: HTMLVideoElement,
 	captureWidth: number,
-	captureHeight: number
+	captureHeight: number,
 ) => {
 	const fakeCanvas = globalFakeCanvas ?? funErr('fake canvas not found');
 	const context =
@@ -191,7 +189,7 @@ const videoToClipboard = async (
 	const [x, y, w, h] = getBounds(
 		captureWidth,
 		captureHeight,
-		screenshotWidth / screenshotHeight
+		screenshotWidth / screenshotHeight,
 	);
 	context.drawImage(
 		video,
@@ -202,7 +200,7 @@ const videoToClipboard = async (
 		0,
 		0,
 		screenshotWidth,
-		screenshotHeight
+		screenshotHeight,
 	);
 
 	const blob = await getBlob(fakeCanvas);
@@ -224,7 +222,7 @@ const captureScreenshotCrossSite = async (video: HTMLVideoElement) => {
 		return videoToClipboard(
 			fakeVideo,
 			fakeVideo.videoWidth,
-			video.clientHeight * (fakeVideo.videoWidth / video.clientWidth)
+			video.clientHeight * (fakeVideo.videoWidth / video.clientWidth),
 		);
 	} finally {
 		resetVideoStyle(video, oldStyle);
@@ -237,7 +235,7 @@ const captureScreenshotCrossSite = async (video: HTMLVideoElement) => {
 const captureScreenshotSameSite = async (video: HTMLVideoElement) =>
 	videoToClipboard(video, video.videoWidth, video.videoHeight);
 
-const observer = new MutationObserver((mutations) => {
+const observer = new MutationObserver(mutations => {
 	for (const mutation of mutations) {
 		for (const added of mutation.addedNodes.values()) {
 			const seekChildren = (node: Node) => {

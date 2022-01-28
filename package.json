@@ -1,5 +1,7 @@
 {
   "dependencies": {
-    "@types/chrome": "^0.0.177"
+    "@types/chrome": "^0.0.177",
+    "preact": "^10.6.4",
+    "ts-loader": "^9.2.6"
   }
 }
