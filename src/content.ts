@@ -1,16 +1,11 @@
 import * as shared from './shared';
+import { funErr, wait } from './shared';
 
 console.log('working...');
 
-var globalStream: MediaStream | undefined = undefined;
-var globalFakeVideo: HTMLVideoElement | undefined = undefined;
-var globalFakeCanvas: HTMLCanvasElement | undefined = undefined;
-
-const initCanvas = () => {
-	if (globalFakeCanvas === undefined) {
-		globalFakeCanvas = document.createElement('canvas');
-	}
-};
+let globalStream: MediaStream | undefined = undefined;
+let globalFakeVideo: HTMLVideoElement | undefined = undefined;
+let globalFakeCanvas = document.createElement('canvas');
 
 const getFakeVideo = async () => {
 	if (globalFakeVideo) return globalFakeVideo;
@@ -29,9 +24,6 @@ const getFakeVideo = async () => {
 		});
 };
 
-const wait = (millis: number) =>
-	new Promise<void>(resolve => setTimeout(resolve, millis));
-
 const getBlob = (canvas: HTMLCanvasElement) =>
 	new Promise<Blob>((resolve, reject) =>
 		canvas.toBlob(blob => {
@@ -41,6 +33,9 @@ const getBlob = (canvas: HTMLCanvasElement) =>
 	);
 
 const moveVideo = (video: HTMLVideoElement) => {
+	video.controls = false;
+	video.classList.add('ebetshotMovedVideo');
+
 	const parent = video.parentElement ?? funErr('video has no parent');
 	document.body.insertBefore(video, document.body.firstChild);
 
@@ -49,86 +44,47 @@ const moveVideo = (video: HTMLVideoElement) => {
 
 const repturnVideo = (video: HTMLVideoElement, parent: HTMLElement) => {
 	parent.appendChild(video);
-};
 
-const setVideoStyle = (video: HTMLVideoElement) => {
-	video.controls = false;
-	const oldStyle = Object.assign({}, video.style);
-
-	video.style.zIndex = '9999999';
-	video.style.position = 'fixed';
-	video.style.left = '0';
-	video.style.top = '0';
-	video.style.width = '100%';
-	video.style.height = 'auto';
-	video.style.cursor = 'none';
-	video.style.transform = 'none';
-
-	return oldStyle;
-};
-
-const resetVideoStyle = (
-	video: HTMLVideoElement,
-	oldStyle: CSSStyleDeclaration,
-) => {
 	video.controls = true;
-	video.style.zIndex = oldStyle.zIndex;
-	video.style.position = oldStyle.position;
-	video.style.left = oldStyle.left;
-	video.style.top = oldStyle.top;
-	video.style.width = oldStyle.width;
-	video.style.height = oldStyle.height;
-	video.style.cursor = oldStyle.cursor;
-	video.style.transform = oldStyle.transform;
+	video.classList.remove('ebetshotMovedVideo');
 };
 
 const createButton = () => {
 	const button = document.createElement('button');
-	button.style.backgroundColor = 'rgba(0, 0, 0, 0.4)';
-	button.style.padding = '5px';
-	button.style.zIndex = '100';
-	button.textContent = '📷';
-	button.style.right = '0';
-	button.style.position =
-		window.location.hostname === 'www.netflix.com' ? 'fixed' : 'absolute';
-	button.style.top =
-		window.location.hostname === 'www.netflix.com' ? '50%' : '0';
-
-	button.dataset.ebetshot = 'b';
+	button.className = 'ebetshotButton';
+	button.innerHTML =
+		'<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 13 13"><defs><style>.cls-1{fill:#fff;}</style></defs><title>take screenshot</title><path class="cls-1" d="M7,.5H6a2,2,0,0,1-2,2v1A3,3,0,0,0,6.5,2.15,3,3,0,0,0,9,3.5v-1A2,2,0,0,1,7,.5Z"/><path class="cls-1" d="M7,4H6A2,2,0,0,1,4,6V7A3,3,0,0,0,6.5,5.65,3,3,0,0,0,9,7V6A2,2,0,0,1,7,4Z"/><polygon class="cls-1" points="12 1.5 12 2.5 10 2.5 10 3.5 12 3.5 12 9.5 10 9.5 10 10.5 12 10.5 12 11.5 13 11.5 13 1.5 12 1.5"/><polygon class="cls-1" points="3 3.5 3 2.5 0 2.5 0 3.5 0 9.5 0 10.5 3 10.5 3 9.5 1 9.5 1 3.5 3 3.5"/><path class="cls-1" d="M6.5,9.5A1.5,1.5,0,0,1,5,8H4A2.5,2.5,0,0,0,9,8H8A1.5,1.5,0,0,1,6.5,9.5Z"/></svg>';
 
 	return button;
 };
 
-const funErr = (msg: string) => {
-	throw msg;
-};
+const applyToVideo = async (video: HTMLVideoElement) => {
+	/* mark video as not to have a button added again */
+	video.dataset.ebetshot = 'b';
 
-const applyToVideo = (element: Node) => {
-	initCanvas();
+	const siteName = window.location.hostname;
+	const [layersUp, forcedMethod] = await getStoredSiteSettings(siteName);
+	const captureMethod =
+		forcedMethod ?? video.src.includes(window.location.hostname)
+			? captureScreenshotSameSite
+			: captureScreenshotCrossSite;
 
-	const container =
-		element.parentNode ?? funErr('video does not have a container');
-
-	([...container.children] as HTMLElement[]).forEach(element => {
-		if (element.dataset.ebetshot) element.remove();
-	});
+	/* find the container of the video n elements up */
+	let container: HTMLElement = video;
+	for (let i = 0; i < layersUp; ++i) {
+		const parent = container.parentElement;
+		if (parent !== null) {
+			container = parent;
+		} else {
+			break;
+		}
+	}
 
 	const button = createButton();
 	button.onclick = event => {
-		console.log('button clicked...');
 		event.stopPropagation();
 
-		const video =
-			container.querySelector('video') ??
-			funErr('video was removed somehow');
-
-		(video.src.includes(window.location.hostname) &&
-			window.location.hostname !== 'www.netflix.com'
-			? captureScreenshotSameSite
-			: captureScreenshotCrossSite)(
-			container.querySelector('video') ??
-				funErr('video was removed somehow'),
-		)
+		captureMethod(video)
 			.then(blob => {
 				console.log(blob);
 				console.log('screenshot copied to clipboard!');
@@ -137,9 +93,9 @@ const applyToVideo = (element: Node) => {
 				console.log(`could not screenshot because ${err}`);
 			});
 	};
+	container.insertBefore(button, container.firstChild);
 
-	container.appendChild(button);
-	console.log(`video added`);
+	console.log('button added to video', video);
 };
 
 const getBounds = (
@@ -163,12 +119,21 @@ const getBounds = (
 };
 
 const getStoredWidthHeight = (): Promise<[number, number] | undefined> =>
-	chrome.storage.sync.get(shared.defaultStorage()).then(results => {
-		const storage = results as shared.ChromeStorage;
-		return storage.fix
-			? [storage.aspectW * storage.scale, storage.aspectH * storage.scale]
-			: undefined;
-	});
+	shared
+		.retrieveStorage('fix', 'aspectW', 'aspectH', 'scale')
+		.then(({ fix, aspectW, aspectH, scale }) =>
+			fix ? [aspectW * scale, aspectH * scale] : undefined,
+		);
+
+const getStoredSiteSettings = (
+	hostname: string,
+): Promise<[number, boolean | undefined]> =>
+	shared
+		.retrieveStorage('layersUp', 'forcedMethod')
+		.then(({ layersUp, forcedMethod }) => [
+			layersUp[hostname] ?? 1,
+			forcedMethod[hostname],
+		]);
 
 const videoToClipboard = async (
 	video: HTMLVideoElement,
@@ -211,9 +176,7 @@ const videoToClipboard = async (
 
 const captureScreenshotCrossSite = async (video: HTMLVideoElement) => {
 	const fakeVideo = await getFakeVideo();
-
 	const oldParent = moveVideo(video);
-	const oldStyle = setVideoStyle(video);
 
 	try {
 		await Promise.all([fakeVideo.play(), wait(250)]);
@@ -225,7 +188,6 @@ const captureScreenshotCrossSite = async (video: HTMLVideoElement) => {
 			video.clientHeight * (fakeVideo.videoWidth / video.clientWidth),
 		);
 	} finally {
-		resetVideoStyle(video, oldStyle);
 		repturnVideo(video, oldParent);
 
 		fakeVideo.pause();
@@ -240,7 +202,13 @@ const observer = new MutationObserver(mutations => {
 		for (const added of mutation.addedNodes.values()) {
 			const seekChildren = (node: Node) => {
 				if (node.nodeName === 'VIDEO') {
-					applyToVideo(node);
+					/* this conversion should be safe */
+					if (
+						(node as HTMLVideoElement).dataset.ebetshot ===
+						undefined
+					) {
+						applyToVideo(node as HTMLVideoElement);
+					}
 				} else {
 					for (const child of node.childNodes.values()) {
 						seekChildren(child);

@@ -35,7 +35,7 @@ const stateFromStorage = (): Promise<PopupState> => {
 };
 
 class Popup extends preact.Component<{}, PopupState> {
-	previousStorage: preact.RefObject<shared.ChromeStorage>;
+	previousStorage: preact.RefObject<Partial<shared.ChromeStorage>>;
 
 	constructor() {
 		super();
@@ -44,12 +44,16 @@ class Popup extends preact.Component<{}, PopupState> {
 		this.state = defaultState();
 
 		stateFromStorage().then(state => {
-			this.previousStorage.current = this.calculateStorage(state);
+			this.previousStorage.current = {};
+			Object.assign(
+				this.previousStorage.current,
+				this.calculateStorage(state),
+			);
 			this.setState(state);
 		});
 	}
 
-	calculateStorage = (state: PopupState): shared.ChromeStorage => ({
+	calculateStorage = (state: PopupState): Partial<shared.ChromeStorage> => ({
 		show: true,
 		fix: state.fix,
 		aspectW: state.width,
@@ -73,9 +77,9 @@ class Popup extends preact.Component<{}, PopupState> {
 			}
 
 			chrome.storage.sync.set(uploadObject);
-		}
 
-		this.previousStorage.current = newStorage;
+			Object.assign(this.previousStorage.current, newStorage);
+		}
 	}
 
 	render() {

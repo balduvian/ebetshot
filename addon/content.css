@@ -1,0 +1,61 @@
+.ebetshotButton {
+	z-index: 99999999;
+
+	display: block;
+	position: absolute;
+	top: 5px;
+	right: 5px;
+
+	width: 30px;
+	height: 30px;
+
+	border: none;
+	padding: 0;
+	border-radius: 5px;
+	box-sizing: content-box;
+
+	background-color: rgba(0, 0, 0, 0.75);
+	box-shadow: 0 0 10px 5px rgb(0 0 0 / 75%);
+}
+
+.ebetshotButton:hover {
+	background-color: rgba(255, 255, 255, 0.75);
+	box-shadow: 0 0 5px 2.5px rgb(255 255 255 / 75%);
+
+	/* acount for the border */
+	top: 2.5px;
+	right: 2.5px;
+	border: 2.5px solid dodgerblue;
+}
+
+.ebetshotButton:active {
+	box-shadow: 0 0 10px 5px rgb(255 255 255 / 75%);
+	border-color: black;
+}
+
+.ebetshotButton > svg {
+	position: absolute;
+	left: 2.5px;
+	top: 2.5px;
+	width: 25px;
+	height: 25px;
+}
+
+.ebetshotButton:hover > svg > * {
+	fill: dodgerblue;
+}
+
+.ebetshotButton:active > svg > * {
+	fill: black;
+}
+
+.ebetshotMovedVideo {
+	z-index: 9999999 !important;
+	position: fixed !important;
+	left: 0 !important;
+	top: 0 !important;
+	width: 100% !important;
+	height: auto !important;
+	cursor: none !important;
+	transform: none !important;
+}
