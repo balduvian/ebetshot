@@ -7,6 +7,15 @@ let globalStream: MediaStream | undefined = undefined;
 let globalFakeVideo: HTMLVideoElement | undefined = undefined;
 let globalFakeCanvas = document.createElement('canvas');
 
+const cssRoot = document.querySelector(':root') as HTMLElement;
+const setCssVar = (variableName: string, value: string) => {
+	cssRoot.style.setProperty('--' + variableName, value);
+};
+
+let lastUsedButtonId = 0;
+const buttonRegistry = new Map<number, HTMLButtonElement>();
+const generateButtonId = () => lastUsedButtonId++;
+
 const getFakeVideo = async () => {
 	if (globalFakeVideo) return globalFakeVideo;
 
@@ -58,9 +67,10 @@ const createButton = () => {
 	return button;
 };
 
-const applyToVideo = async (video: HTMLVideoElement) => {
-	/* mark video as not to have a button added again */
-	video.dataset.ebetshot = 'b';
+const addButtonToVideo = async (video: HTMLVideoElement) => {
+	/* mark the video as being associated with this button */
+	const buttonId = generateButtonId();
+	video.dataset.ebetshotButtonId = buttonId.toString();
 
 	const siteName = window.location.hostname;
 	const [layersUp, forcedMethod] = await getStoredSiteSettings(siteName);
@@ -83,7 +93,6 @@ const applyToVideo = async (video: HTMLVideoElement) => {
 	const button = createButton();
 	button.onclick = event => {
 		event.stopPropagation();
-
 		captureMethod(video)
 			.then(blob => {
 				console.log(blob);
@@ -94,6 +103,7 @@ const applyToVideo = async (video: HTMLVideoElement) => {
 			});
 	};
 	container.insertBefore(button, container.firstChild);
+	buttonRegistry.set(buttonId, button);
 
 	console.log('button added to video', video);
 };
@@ -134,6 +144,9 @@ const getStoredSiteSettings = (
 			layersUp[hostname] ?? 1,
 			forcedMethod[hostname],
 		]);
+
+const getShowButton = () =>
+	shared.retrieveStorage('show').then(({ show }) => show);
 
 const videoToClipboard = async (
 	video: HTMLVideoElement,
@@ -177,6 +190,7 @@ const videoToClipboard = async (
 const captureScreenshotCrossSite = async (video: HTMLVideoElement) => {
 	const fakeVideo = await getFakeVideo();
 	const oldParent = moveVideo(video);
+	document.body.requestPointerLock();
 
 	try {
 		await Promise.all([fakeVideo.play(), wait(250)]);
@@ -188,8 +202,8 @@ const captureScreenshotCrossSite = async (video: HTMLVideoElement) => {
 			video.clientHeight * (fakeVideo.videoWidth / video.clientWidth),
 		);
 	} finally {
+		document.exitPointerLock();
 		repturnVideo(video, oldParent);
-
 		fakeVideo.pause();
 	}
 };
@@ -197,28 +211,72 @@ const captureScreenshotCrossSite = async (video: HTMLVideoElement) => {
 const captureScreenshotSameSite = async (video: HTMLVideoElement) =>
 	videoToClipboard(video, video.videoWidth, video.videoHeight);
 
-const observer = new MutationObserver(mutations => {
-	for (const mutation of mutations) {
-		for (const added of mutation.addedNodes.values()) {
-			const seekChildren = (node: Node) => {
-				if (node.nodeName === 'VIDEO') {
-					/* this conversion should be safe */
-					if (
-						(node as HTMLVideoElement).dataset.ebetshot ===
-						undefined
-					) {
-						applyToVideo(node as HTMLVideoElement);
-					}
-				} else {
-					for (const child of node.childNodes.values()) {
-						seekChildren(child);
-					}
-				}
-			};
+const showHideButtons = (show: boolean) => {
+	setCssVar('buttonDisplay', show ? 'block' : 'none');
+};
 
-			seekChildren(added);
+/* ENTRY POINT */
+
+chrome.runtime.onMessage.addListener((message: shared.EbetshotMessage) => {
+	console.log('received message', message);
+	if (message.name === shared.MESSAGE_SHOW) {
+		showHideButtons(message.value);
+	}
+});
+
+const seekChildren = (
+	node: Node,
+	onVideo: (element: HTMLVideoElement) => void,
+) => {
+	if (node.nodeName === 'VIDEO') {
+		onVideo(node as HTMLVideoElement);
+	} else {
+		for (const child of node.childNodes.values()) {
+			seekChildren(child, onVideo);
 		}
 	}
+};
+
+const observer = new MutationObserver(mutations => {
+	const addedVideos: HTMLVideoElement[] = [];
+	const removedVideos: HTMLVideoElement[] = [];
+
+	for (const mutation of mutations) {
+		if (mutation.type !== 'childList') continue;
+
+		for (const added of mutation.addedNodes.values()) {
+			seekChildren(added, video => addedVideos.push(video));
+		}
+
+		for (const removed of mutation.removedNodes.values()) {
+			seekChildren(removed, video => removedVideos.push(video));
+		}
+	}
+
+	/* if a video was both added and removed in the same mutations event */
+	/* that means it was merely moved. ignore that video */
+
+	addedVideos
+		.filter(added => !removedVideos.some(removed => added === removed))
+		.forEach(video => {
+			if (video.dataset.ebetshotButtonId === undefined)
+				addButtonToVideo(video);
+		});
+
+	removedVideos
+		.filter(removed => !addedVideos.some(added => added === removed))
+		.forEach(video => {
+			let buttonId: string | undefined,
+				assoc: HTMLButtonElement | undefined;
+
+			(buttonId = video.dataset.ebetshotButtonId) &&
+				buttonId !== undefined &&
+				((assoc = buttonRegistry.get(+buttonId)),
+				assoc?.remove(),
+				buttonRegistry.delete(+buttonId),
+				delete video.dataset.ebetshotButtonId,
+				console.log('removed button', assoc));
+		});
 });
 
 observer.observe(document.body, {
@@ -227,10 +285,8 @@ observer.observe(document.body, {
 	subtree: true,
 });
 
-const videos = document.getElementsByTagName('video');
-
-console.log(`found ${videos.length} videos initally`);
-
-for (const video of videos) {
-	applyToVideo(video);
+for (const video of document.getElementsByTagName('video')) {
+	addButtonToVideo(video);
 }
+
+getShowButton().then(show => showHideButtons(show));

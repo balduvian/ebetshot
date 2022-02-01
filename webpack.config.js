@@ -18,6 +18,7 @@ module.exports = {
 	resolve: {
 		extensions: ['.tsx', '.ts', '.js'],
 	},
+	target: ['web', 'es2020'],
 	output: {
 		filename: '[name].js',
 		path: path.resolve(__dirname, 'addon'),

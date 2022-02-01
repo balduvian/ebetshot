@@ -1,7 +1,11 @@
+:root {
+	--buttonDisplay: none;
+}
+
 .ebetshotButton {
 	z-index: 99999999;
 
-	display: block;
+	display: var(--buttonDisplay);
 	position: absolute;
 	top: 5px;
 	right: 5px;

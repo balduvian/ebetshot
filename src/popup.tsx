@@ -2,6 +2,7 @@ import * as preact from 'preact';
 import * as shared from './shared';
 
 type PopupState = {
+	show: boolean;
 	fix: boolean;
 	width: number;
 	height: number;
@@ -13,6 +14,7 @@ type KeyOfType<T, V> = keyof {
 };
 
 const defaultState = (): PopupState => ({
+	show: true,
 	fix: true,
 	width: 16,
 	height: 9,
@@ -26,6 +28,7 @@ const stateFromStorage = (): Promise<PopupState> => {
 		const storage = resultObject as shared.ChromeStorage;
 
 		return {
+			show: storage.show,
 			fix: storage.fix,
 			width: storage.aspectW,
 			height: storage.aspectH,
@@ -54,12 +57,30 @@ class Popup extends preact.Component<{}, PopupState> {
 	}
 
 	calculateStorage = (state: PopupState): Partial<shared.ChromeStorage> => ({
-		show: true,
+		show: state.show,
 		fix: state.fix,
 		aspectW: state.width,
 		aspectH: state.height,
 		scale: state.scale,
 	});
+
+	onStorageChange = <T,>(
+		field: KeyOfType<shared.ChromeStorage, T>,
+		newValue: T,
+	) => {
+		if (field === 'show') {
+			chrome.tabs.query({}).then(tabs =>
+				tabs.forEach(
+					tab =>
+						tab.id !== undefined &&
+						chrome.tabs.sendMessage(tab.id, {
+							name: shared.MESSAGE_SHOW,
+							value: newValue,
+						}),
+				),
+			);
+		}
+	};
 
 	componentDidUpdate() {
 		const newStorage = this.calculateStorage(this.state);
@@ -76,7 +97,14 @@ class Popup extends preact.Component<{}, PopupState> {
 				}
 			}
 
-			chrome.storage.sync.set(uploadObject);
+			chrome.storage.sync.set(uploadObject).then(() => {
+				for (const [key, newValue] of Object.entries(uploadObject)) {
+					this.onStorageChange(
+						key as keyof shared.ChromeStorage,
+						newValue,
+					);
+				}
+			});
 
 			Object.assign(this.previousStorage.current, newStorage);
 		}
@@ -164,6 +192,7 @@ class Popup extends preact.Component<{}, PopupState> {
 
 		return (
 			<div class="holder">
+				{checkOption('Show Button', 'show')}
 				{checkOption('Fix Size', 'fix')}
 				{numberOption('Aspect Ratio', '/', ['width', 'height'], !fix)}
 				{numberOption('Scale', '', ['scale'], !fix)}

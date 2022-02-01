@@ -1,6 +1,13 @@
 export const METHOD_SAME_SITE = true;
 export const METHOD_CROSS_SITE = false;
 
+export type EbetshotMessage = {
+	name: string;
+	value: any;
+};
+
+export const MESSAGE_SHOW = 'show';
+
 export type ChromeStorage = {
 	show: boolean;
 	fix: boolean;
