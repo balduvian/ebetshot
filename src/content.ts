@@ -3,9 +3,12 @@ import { funErr, wait } from './shared';
 
 console.log('working...');
 
-let globalStream: MediaStream | undefined = undefined;
-let globalFakeVideo: HTMLVideoElement | undefined = undefined;
-let globalFakeCanvas = document.createElement('canvas');
+let globalScreencapVideo: HTMLVideoElement | undefined = undefined;
+let globalCanvas = document.createElement('canvas');
+
+const globalContainer = document.createElement('div');
+globalContainer.className = 'ebetshotMovedVideoContainer';
+document.body.insertBefore(globalContainer, document.body.firstChild);
 
 const cssRoot = document.querySelector(':root') as HTMLElement;
 const setCssVar = (variableName: string, value: string) => {
@@ -16,8 +19,8 @@ let lastUsedButtonId = 0;
 const buttonRegistry = new Map<number, HTMLButtonElement>();
 const generateButtonId = () => lastUsedButtonId++;
 
-const getFakeVideo = async () => {
-	if (globalFakeVideo) return globalFakeVideo;
+const getScreencapVideo = async () => {
+	if (globalScreencapVideo) return globalScreencapVideo;
 
 	return navigator.mediaDevices
 		.getDisplayMedia({
@@ -25,11 +28,13 @@ const getFakeVideo = async () => {
 			video: true,
 		})
 		.then(stream => {
-			globalStream = stream;
-			globalFakeVideo = document.createElement('video');
-			globalFakeVideo.srcObject = globalStream;
+			globalScreencapVideo = document.createElement('video');
+			globalScreencapVideo.srcObject = stream;
 
-			return globalFakeVideo;
+			stream.getVideoTracks()[0].onended = () =>
+				(globalScreencapVideo = undefined);
+
+			return globalScreencapVideo;
 		});
 };
 
@@ -46,16 +51,19 @@ const moveVideo = (video: HTMLVideoElement) => {
 	video.classList.add('ebetshotMovedVideo');
 
 	const parent = video.parentElement ?? funErr('video has no parent');
-	document.body.insertBefore(video, document.body.firstChild);
+	globalContainer.insertBefore(video, globalContainer.firstChild);
+	globalContainer.classList.add('ebetshotActiveContainer');
 
 	return parent;
 };
 
-const repturnVideo = (video: HTMLVideoElement, parent: HTMLElement) => {
+const returnVideo = (video: HTMLVideoElement, parent: HTMLElement) => {
 	parent.appendChild(video);
 
 	video.controls = true;
 	video.classList.remove('ebetshotMovedVideo');
+
+	globalContainer.classList.remove('ebetshotActiveContainer');
 };
 
 const createButton = () => {
@@ -150,66 +158,71 @@ const getShowButton = () =>
 
 const videoToClipboard = async (
 	video: HTMLVideoElement,
+	offsetX: number,
+	offsetY: number,
 	captureWidth: number,
 	captureHeight: number,
 ) => {
-	const fakeCanvas = globalFakeCanvas ?? funErr('fake canvas not found');
+	const canvas = globalCanvas ?? funErr('fake canvas not found');
 	const context =
-		fakeCanvas.getContext('2d') ?? funErr('context could not be created');
+		canvas.getContext('2d') ?? funErr('context could not be created');
 
-	const stored = await getStoredWidthHeight();
-	const [screenshotWidth, screenshotHeight] =
-		stored === undefined ? [captureWidth, captureHeight] : stored;
+	const [finalWidth, finalHeight] = (await getStoredWidthHeight()) ?? [
+		captureWidth,
+		captureHeight,
+	];
 
-	fakeCanvas.width = screenshotWidth;
-	fakeCanvas.height = screenshotHeight;
+	canvas.width = finalWidth;
+	canvas.height = finalHeight;
 
 	const [x, y, w, h] = getBounds(
 		captureWidth,
 		captureHeight,
-		screenshotWidth / screenshotHeight,
+		finalWidth / finalHeight,
 	);
 	context.drawImage(
 		video,
-		x,
-		y,
+		x + offsetX,
+		y + offsetY,
 		w,
 		h,
 		0,
 		0,
-		screenshotWidth,
-		screenshotHeight,
+		finalWidth,
+		finalHeight,
 	);
 
-	const blob = await getBlob(fakeCanvas);
+	const blob = await getBlob(canvas);
 	await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
 
 	return blob;
 };
 
 const captureScreenshotCrossSite = async (video: HTMLVideoElement) => {
-	const fakeVideo = await getFakeVideo();
+	const screencapVideo = await getScreencapVideo();
 	const oldParent = moveVideo(video);
 	document.body.requestPointerLock();
 
 	try {
-		await Promise.all([fakeVideo.play(), wait(250)]);
+		await Promise.all([screencapVideo.play(), wait(200)]);
 
-		/* scale by how much the video capture coordinates differ from screen coordinates */
-		return videoToClipboard(
-			fakeVideo,
-			fakeVideo.videoWidth,
-			video.clientHeight * (fakeVideo.videoWidth / video.clientWidth),
+		/* first isolate the video in the middle of the screen recording */
+		const [x, y, w, h] = getBounds(
+			screencapVideo.videoWidth,
+			screencapVideo.videoHeight,
+			video.videoWidth / video.videoHeight,
 		);
+
+		return videoToClipboard(screencapVideo, x, y, w, h);
 	} finally {
 		document.exitPointerLock();
-		repturnVideo(video, oldParent);
-		fakeVideo.pause();
+		returnVideo(video, oldParent);
+		screencapVideo.pause();
 	}
 };
 
 const captureScreenshotSameSite = async (video: HTMLVideoElement) =>
-	videoToClipboard(video, video.videoWidth, video.videoHeight);
+	videoToClipboard(video, 0, 0, video.videoWidth, video.videoHeight);
 
 const showHideButtons = (show: boolean) => {
 	setCssVar('buttonDisplay', show ? 'block' : 'none');
@@ -218,7 +231,6 @@ const showHideButtons = (show: boolean) => {
 /* ENTRY POINT */
 
 chrome.runtime.onMessage.addListener((message: shared.EbetshotMessage) => {
-	console.log('received message', message);
 	if (message.name === shared.MESSAGE_SHOW) {
 		showHideButtons(message.value);
 	}
