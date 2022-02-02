@@ -1,7 +1,8 @@
 {
-  "dependencies": {
-    "@types/chrome": "^0.0.177",
-    "preact": "^10.6.4",
-    "ts-loader": "^9.2.6"
-  }
+	"dependencies": {
+		"@types/chrome": "^0.0.177",
+		"preact": "^10.6.4",
+		"ts-loader": "^9.2.6"
+	},
+	"license": "GPL-3.0-or-later"
 }
