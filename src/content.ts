@@ -289,10 +289,11 @@ const observer = new MutationObserver(mutations => {
 
 	addedVideos
 		.filter(added => !removedVideos.some(removed => added === removed))
-		.forEach(video => {
-			if (video.dataset.ebetshotButtonId === undefined)
-				addButtonToVideo(video);
-		});
+		.forEach(
+			video =>
+				video.dataset.ebetshotButtonId === undefined &&
+				addButtonToVideo(video),
+		);
 
 	removedVideos
 		.filter(removed => !addedVideos.some(added => added === removed))
@@ -300,8 +301,7 @@ const observer = new MutationObserver(mutations => {
 			let buttonId: string | undefined,
 				assoc: HTMLButtonElement | undefined;
 
-			(buttonId = video.dataset.ebetshotButtonId) &&
-				buttonId !== undefined &&
+			(buttonId = video.dataset.ebetshotButtonId) !== undefined &&
 				((assoc = buttonRegistry.get(+buttonId)),
 				assoc?.remove(),
 				buttonRegistry.delete(+buttonId),
