@@ -1,6 +1,7 @@
-const path = require('path');
+import path from 'path';
+import * as webpack from 'webpack';
 
-module.exports = {
+const config: webpack.Configuration = {
 	mode: 'production',
 	entry: {
 		content: './src/content.ts',
@@ -29,3 +30,5 @@ module.exports = {
 		path: path.resolve(__dirname, 'addon'),
 	},
 };
+
+export default config;
