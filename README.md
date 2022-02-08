@@ -1,6 +1,6 @@
 ![ebetshot logo](addon/icon128.png)
 
-# Ebetshot 에벳셧
+# Ebetshot
 
 A video screenshot extension for Chrome.
 

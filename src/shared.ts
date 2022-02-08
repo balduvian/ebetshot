@@ -70,11 +70,10 @@ export const defaultStoragePart = (
 
 export const retrieveStorage = (
 	...keys: (keyof ChromeStorage)[]
-): Promise<Pick<ChromeStorage, typeof keys[number]>> => {
-	return chrome.storage.sync
+): Promise<Pick<ChromeStorage, typeof keys[number]>> =>
+	chrome.storage.sync
 		.get(defaultStoragePart(...keys))
 		.then(results => results as Pick<ChromeStorage, typeof keys[number]>);
-};
 
 /* util functions */
 
