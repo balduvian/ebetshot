@@ -56,6 +56,8 @@ const stateFromStorage = (): Promise<PopupState> => {
 	});
 };
 
+const openTab = (url: string) => chrome.tabs.create({ url: url });
+
 class Popup extends preact.Component<{}, PopupState> {
 	previousStorage: preact.RefObject<Partial<shared.ChromeStorage>>;
 
@@ -196,9 +198,13 @@ class Popup extends preact.Component<{}, PopupState> {
 			</div>
 		);
 
-		const buttonOption = (text: string, callback: () => void) => (
+		const buttonOption = (
+			options: { text: string; callback: () => void }[],
+		) => (
 			<div class="singleOption">
-				<button onClick={callback}>{text}</button>
+				{options.map(({ text, callback }) => (
+					<button onClick={callback}>{text}</button>
+				))}
 			</div>
 		);
 
@@ -222,11 +228,25 @@ class Popup extends preact.Component<{}, PopupState> {
 					}`,
 					{},
 				)}
-				{buttonOption('Reset', () => {
-					this.setState(defaultState());
-				})}
+				{buttonOption([
+					{
+						text: 'Reset',
+						callback: () => {
+							this.setState(defaultState());
+						},
+					},
+					{
+						text: 'Keyboard Shortcuts',
+						callback: () =>
+							openTab('chrome://extensions/shortcuts'),
+					},
+				])}
 				{textOption('Have fun immersing!', reminderStyle)}
-				<a href="https://github.com/balduvian/ebetshot">
+				<a
+					onClick={() =>
+						openTab('https://github.com/balduvian/ebetshot')
+					}
+				>
 					<img src="icon128.png" class="logo"></img>
 				</a>
 			</div>

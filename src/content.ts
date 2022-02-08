@@ -19,8 +19,12 @@
 
 import * as shared from './shared';
 import { funErr, wait } from './shared';
+import icon from './icon.svg';
 
-console.log('working...');
+console.log('Ebetshot initialized');
+
+/* button chosen when the screenshot key shortcut is received */
+let activeButton: HTMLButtonElement | undefined = undefined;
 
 let globalScreencapVideo: HTMLVideoElement | undefined = undefined;
 let globalCanvas = document.createElement('canvas');
@@ -30,9 +34,8 @@ globalContainer.className = 'ebetshotMovedVideoContainer';
 document.body.insertBefore(globalContainer, document.body.firstChild);
 
 const cssRoot = document.querySelector(':root') as HTMLElement;
-const setCssVar = (variableName: string, value: string) => {
+const setCssVar = (variableName: string, value: string) =>
 	cssRoot.style.setProperty('--' + variableName, value);
-};
 
 let lastUsedButtonId = 0;
 const buttonRegistry = new Map<number, HTMLButtonElement>();
@@ -88,9 +91,7 @@ const returnVideo = (video: HTMLVideoElement, parent: HTMLElement) => {
 const createButton = () => {
 	const button = document.createElement('button');
 	button.className = 'ebetshotButton';
-	button.innerHTML =
-		'<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 13 13"><defs><style>.cls-1{fill:#fff;}</style></defs><title>take screenshot</title><path class="cls-1" d="M7,.5H6a2,2,0,0,1-2,2v1A3,3,0,0,0,6.5,2.15,3,3,0,0,0,9,3.5v-1A2,2,0,0,1,7,.5Z"/><path class="cls-1" d="M7,4H6A2,2,0,0,1,4,6V7A3,3,0,0,0,6.5,5.65,3,3,0,0,0,9,7V6A2,2,0,0,1,7,4Z"/><polygon class="cls-1" points="12 1.5 12 2.5 10 2.5 10 3.5 12 3.5 12 9.5 10 9.5 10 10.5 12 10.5 12 11.5 13 11.5 13 1.5 12 1.5"/><polygon class="cls-1" points="3 3.5 3 2.5 0 2.5 0 3.5 0 9.5 0 10.5 3 10.5 3 9.5 1 9.5 1 3.5 3 3.5"/><path class="cls-1" d="M6.5,9.5A1.5,1.5,0,0,1,5,8H4A2.5,2.5,0,0,0,9,8H8A1.5,1.5,0,0,1,6.5,9.5Z"/></svg>';
-
+	button.innerHTML = icon;
 	return button;
 };
 
@@ -120,19 +121,37 @@ const addButtonToVideo = async (video: HTMLVideoElement) => {
 	const button = createButton();
 	button.onclick = event => {
 		event.stopPropagation();
+		activeButton = button;
 		captureMethod(video)
-			.then(blob => {
-				console.log(blob);
-				console.log('screenshot copied to clipboard!');
-			})
-			.catch(err => {
-				console.log(`could not screenshot because ${err}`);
-			});
+			.then(blob => console.log('Screenshot copied to clipboard!', blob))
+			.catch(err => console.log(`Could not screenshot because ${err}`));
 	};
 	container.insertBefore(button, container.firstChild);
 	buttonRegistry.set(buttonId, button);
 
-	console.log('button added to video', video);
+	/* the first video that loads on the page becomes the active button */
+	if (activeButton === undefined) {
+		activeButton = button;
+	}
+	/* also interacting with the video makes its button the active one */
+	video.onclick = () => (activeButton = button);
+
+	console.log('Button added to video', video);
+};
+
+const removeButtonFromVideo = (video: HTMLVideoElement) => {
+	const buttonId = video.dataset.ebetshotButtonId;
+	if (buttonId === undefined) return;
+
+	delete video.dataset.ebetshotButtonId;
+
+	const button = buttonRegistry.get(+buttonId);
+	buttonRegistry.delete(+buttonId);
+
+	button?.remove();
+	if (button === activeButton) activeButton = undefined;
+
+	console.log('Removed button', button);
 };
 
 const getBounds = (
@@ -252,10 +271,16 @@ const showHideButtons = (show: boolean) => {
 chrome.runtime.onMessage.addListener((message: shared.EbetshotMessage) => {
 	if (message.name === shared.MESSAGE_SHOW) {
 		showHideButtons(message.value);
+	} else if (message.name === shared.MESSAGE_SCREENSHOT) {
+		activeButton?.click();
 	}
 });
 
-const seekChildren = (
+/**
+ * the mutated elements fall under the tree of a parent element,
+ * seek through the tree for all child videos
+ */
+const seekChildVideos = (
 	node: Node,
 	onVideo: (element: HTMLVideoElement) => void,
 ) => {
@@ -263,7 +288,7 @@ const seekChildren = (
 		onVideo(node as HTMLVideoElement);
 	} else {
 		for (const child of node.childNodes.values()) {
-			seekChildren(child, onVideo);
+			seekChildVideos(child, onVideo);
 		}
 	}
 };
@@ -276,11 +301,11 @@ const observer = new MutationObserver(mutations => {
 		if (mutation.type !== 'childList') continue;
 
 		for (const added of mutation.addedNodes.values()) {
-			seekChildren(added, video => addedVideos.push(video));
+			seekChildVideos(added, video => addedVideos.push(video));
 		}
 
 		for (const removed of mutation.removedNodes.values()) {
-			seekChildren(removed, video => removedVideos.push(video));
+			seekChildVideos(removed, video => removedVideos.push(video));
 		}
 	}
 
@@ -297,17 +322,7 @@ const observer = new MutationObserver(mutations => {
 
 	removedVideos
 		.filter(removed => !addedVideos.some(added => added === removed))
-		.forEach(video => {
-			let buttonId: string | undefined,
-				assoc: HTMLButtonElement | undefined;
-
-			(buttonId = video.dataset.ebetshotButtonId) !== undefined &&
-				((assoc = buttonRegistry.get(+buttonId)),
-				assoc?.remove(),
-				buttonRegistry.delete(+buttonId),
-				delete video.dataset.ebetshotButtonId,
-				console.log('removed button', assoc));
-		});
+		.forEach(video => removeButtonFromVideo(video));
 });
 
 observer.observe(document.body, {

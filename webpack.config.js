@@ -5,6 +5,7 @@ module.exports = {
 	entry: {
 		content: './src/content.ts',
 		popup: './src/popup.tsx',
+		background: './src/background.ts',
 	},
 	module: {
 		rules: [
@@ -12,6 +13,10 @@ module.exports = {
 				test: /\.tsx?$/,
 				use: 'ts-loader',
 				exclude: /node_modules/,
+			},
+			{
+				test: /\.svg$/,
+				loader: 'svg-inline-loader',
 			},
 		],
 	},

@@ -26,6 +26,7 @@ export type EbetshotMessage = {
 };
 
 export const MESSAGE_SHOW = 'show';
+export const MESSAGE_SCREENSHOT = 'screenshot';
 
 export type ChromeStorage = {
 	show: boolean;
@@ -49,6 +50,7 @@ export const defaultStorage = (): ChromeStorage => ({
 	},
 	forcedMethod: {
 		'www.netflix.com': METHOD_CROSS_SITE,
+		'www.youtube.com': METHOD_SAME_SITE,
 	},
 });
 

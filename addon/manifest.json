@@ -1,7 +1,7 @@
 {
 	"name": "Ebetshot 에벳셧",
 	"description": "Copy screenshots of videos directly to your clipboard",
-	"version": "1.2",
+	"version": "1.2.1",
 	"manifest_version": 3,
 	"content_scripts": [
 		{
@@ -10,6 +10,9 @@
 			"js": ["content.js"]
 		}
 	],
+	"background": {
+		"service_worker": "background.js"
+	},
 	"permissions": ["storage", "activeTab"],
 	"action": {
 		"default_popup": "popup.html",
@@ -25,5 +28,11 @@
 		"32": "icon32.png",
 		"48": "icon48.png",
 		"128": "icon128.png"
+	},
+	"commands": {
+		"takeScreenshot": {
+			"suggested_key": "Ctrl+P",
+			"description": "Take a screenshot"
+		}
 	}
 }

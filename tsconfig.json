@@ -3,7 +3,7 @@
     "chrome"
   ],
   "include": [
-    "src/*.ts", "src/*.tsx"
+    "src/*.ts", "src/*.tsx", "src/*.*.ts"
   ],
   "compilerOptions": {
     /* Visit https://aka.ms/tsconfig.json to read more about this file */
