@@ -1,7 +1,7 @@
 {
 	"name": "Ebetshot",
 	"description": "Copy screenshots of videos directly to your clipboard",
-	"version": "1.2.2",
+	"version": "1.2.3",
 	"manifest_version": 3,
 	"content_scripts": [
 		{
