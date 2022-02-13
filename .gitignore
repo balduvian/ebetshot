@@ -1,4 +1,4 @@
-/addon/*.js
+*.js
 /node_modules
 *.crx
 *.pem

@@ -70,9 +70,9 @@ const getBlob = (canvas: HTMLCanvasElement) =>
 
 const moveVideo = (video: HTMLVideoElement) => {
 	video.controls = false;
-	video.classList.add('ebetshotMovedVideo');
 
 	const parent = video.parentElement ?? funErr('video has no parent');
+
 	globalContainer.insertBefore(video, globalContainer.firstChild);
 	globalContainer.classList.add('ebetshotActiveContainer');
 
@@ -83,7 +83,6 @@ const returnVideo = (video: HTMLVideoElement, parent: HTMLElement) => {
 	parent.appendChild(video);
 
 	video.controls = true;
-	video.classList.remove('ebetshotMovedVideo');
 
 	globalContainer.classList.remove('ebetshotActiveContainer');
 };
@@ -242,7 +241,7 @@ const captureScreenshotCrossSite = async (video: HTMLVideoElement) => {
 	document.body.requestPointerLock();
 
 	try {
-		await Promise.all([screencapVideo.play(), wait(200)]);
+		await Promise.all([screencapVideo.play(), wait(100)]);
 
 		/* first isolate the video in the middle of the screen recording */
 		const [x, y, w, h] = getBounds(

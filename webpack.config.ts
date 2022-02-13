@@ -27,7 +27,7 @@ const config: webpack.Configuration = {
 	target: ['web', 'es2020'],
 	output: {
 		filename: '[name].js',
-		path: path.resolve(__dirname, 'addon'),
+		path: path.resolve(__dirname, 'extension'),
 	},
 };
 

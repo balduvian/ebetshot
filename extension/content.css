@@ -68,9 +68,12 @@
 	background-color: black;
 }
 
-.ebetshotMovedVideo {
+.ebetshotActiveContainer > video {
 	cursor: none;
 	transform: none;
 	object-fit: contain;
 	position: relative;
+
+	width: 100% !important;
+	height: 100% !important;
 }
