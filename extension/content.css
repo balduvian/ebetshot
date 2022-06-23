@@ -59,8 +59,8 @@
 	position: fixed;
 	left: 0;
 	top: 0;
-	width: 100%;
-	height: 100%;
+	width: 100vw;
+	height: 100vh;
 }
 
 .ebetshotActiveContainer {
@@ -69,11 +69,11 @@
 }
 
 .ebetshotActiveContainer > video {
-	cursor: none;
-	transform: none;
-	object-fit: contain;
-	position: relative;
+	cursor: none !important;
+	transform: none !important;
+	object-fit: contain !important;
+	position: relative !important;
 
-	width: 100% !important;
-	height: 100% !important;
+	width: 100vw !important;
+	height: 100vh !important;
 }

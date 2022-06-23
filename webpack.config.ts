@@ -1,8 +1,10 @@
 import path from 'path';
 import * as webpack from 'webpack';
 
-const config: webpack.Configuration = {
-	mode: 'production',
+const config = (
+	env: any,
+	argv: { [key: string]: string },
+): webpack.Configuration => ({
 	entry: {
 		content: './src/content.ts',
 		popup: './src/popup.tsx',
@@ -29,6 +31,9 @@ const config: webpack.Configuration = {
 		filename: '[name].js',
 		path: path.resolve(__dirname, 'extension'),
 	},
-};
+	optimization: {
+		minimize: argv.mode === 'production',
+	},
+});
 
 export default config;

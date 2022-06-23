@@ -47,10 +47,12 @@ export const defaultStorage = (): ChromeStorage => ({
 	layersUp: {
 		'www.youtube.com': 2,
 		'www.netflix.com': 5,
+		'www.kocowa.com': 2,
 	},
 	forcedMethod: {
 		'www.netflix.com': METHOD_CROSS_SITE,
 		'www.youtube.com': METHOD_SAME_SITE,
+		'www.kocowa.com': METHOD_CROSS_SITE,
 	},
 });
 

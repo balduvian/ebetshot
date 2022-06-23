@@ -69,6 +69,7 @@ const getBlob = (canvas: HTMLCanvasElement) =>
 	);
 
 const moveVideo = (video: HTMLVideoElement) => {
+	const originalControls = video.controls;
 	video.controls = false;
 
 	const parent = video.parentElement ?? funErr('video has no parent');
@@ -76,15 +77,23 @@ const moveVideo = (video: HTMLVideoElement) => {
 	globalContainer.insertBefore(video, globalContainer.firstChild);
 	globalContainer.classList.add('ebetshotActiveContainer');
 
-	return parent;
+	document.body.style.overflow = 'hidden';
+
+	return <[HTMLElement, boolean]>[parent, originalControls];
 };
 
-const returnVideo = (video: HTMLVideoElement, parent: HTMLElement) => {
+const returnVideo = (
+	video: HTMLVideoElement,
+	parent: HTMLElement,
+	controls: boolean,
+) => {
 	parent.appendChild(video);
 
-	video.controls = true;
+	video.controls = controls;
 
 	globalContainer.classList.remove('ebetshotActiveContainer');
+
+	document.body.style.removeProperty('overflow');
 };
 
 const createButton = () => {
@@ -94,7 +103,7 @@ const createButton = () => {
 	return button;
 };
 
-const addButtonToVideo = async (video: HTMLVideoElement) => {
+export const addButtonToVideo = async (video: HTMLVideoElement) => {
 	/* mark the video as being associated with this button */
 	const buttonId = generateButtonId();
 	video.dataset.ebetshotButtonId = buttonId.toString();
@@ -237,7 +246,7 @@ const videoToClipboard = async (
 
 const captureScreenshotCrossSite = async (video: HTMLVideoElement) => {
 	const screencapVideo = await getScreencapVideo();
-	const oldParent = moveVideo(video);
+	const [oldParent, oldControls] = moveVideo(video);
 	document.body.requestPointerLock();
 
 	try {
@@ -253,7 +262,7 @@ const captureScreenshotCrossSite = async (video: HTMLVideoElement) => {
 		return videoToClipboard(screencapVideo, x, y, w, h);
 	} finally {
 		document.exitPointerLock();
-		returnVideo(video, oldParent);
+		returnVideo(video, oldParent, oldControls);
 		screencapVideo.pause();
 	}
 };
@@ -293,8 +302,8 @@ const seekChildVideos = (
 };
 
 const observer = new MutationObserver(mutations => {
-	const addedVideos: HTMLVideoElement[] = [];
-	const removedVideos: HTMLVideoElement[] = [];
+	let addedVideos: HTMLVideoElement[] = [];
+	let removedVideos: HTMLVideoElement[] = [];
 
 	for (const mutation of mutations) {
 		if (mutation.type !== 'childList') continue;
@@ -310,18 +319,26 @@ const observer = new MutationObserver(mutations => {
 
 	/* if a video was both added and removed in the same mutations event */
 	/* that means it was merely moved. ignore that video */
+	/* have to do some cancelling outs 1 on 1 */
 
-	addedVideos
-		.filter(added => !removedVideos.some(removed => added === removed))
-		.forEach(
-			video =>
-				video.dataset.ebetshotButtonId === undefined &&
-				addButtonToVideo(video),
-		);
+	addedVideos = addedVideos.filter(added => {
+		const index = removedVideos.findIndex(removed => removed === added);
 
-	removedVideos
-		.filter(removed => !addedVideos.some(added => added === removed))
-		.forEach(video => removeButtonFromVideo(video));
+		if (index === -1) {
+			return true;
+		} else {
+			removedVideos.splice(index, 1);
+			return false;
+		}
+	});
+
+	addedVideos.forEach(
+		video =>
+			video.dataset.ebetshotButtonId === undefined &&
+			addButtonToVideo(video),
+	);
+
+	removedVideos.forEach(video => removeButtonFromVideo(video));
 });
 
 observer.observe(document.body, {
@@ -331,6 +348,7 @@ observer.observe(document.body, {
 });
 
 for (const video of document.getElementsByTagName('video')) {
+	console.log('Found initial video');
 	addButtonToVideo(video);
 }
 
