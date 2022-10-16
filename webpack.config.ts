@@ -10,6 +10,7 @@ const config = (
 		popup: './src/popup.tsx',
 		background: './src/background.ts',
 	},
+	mode: 'production',
 	module: {
 		rules: [
 			{

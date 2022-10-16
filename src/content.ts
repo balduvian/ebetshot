@@ -23,9 +23,6 @@ import icon from './icon.svg';
 
 console.log('Ebetshot initialized');
 
-/* button chosen when the screenshot key shortcut is received */
-let activeButton: HTMLButtonElement | undefined = undefined;
-
 let globalScreencapVideo: HTMLVideoElement | undefined = undefined;
 let globalCanvas = document.createElement('canvas');
 
@@ -37,9 +34,22 @@ const cssRoot = document.querySelector(':root') as HTMLElement;
 const setCssVar = (variableName: string, value: string) =>
 	cssRoot.style.setProperty('--' + variableName, value);
 
+type RegistryEntry = { button: HTMLButtonElement; video: HTMLVideoElement };
+
 let lastUsedButtonId = 0;
-const buttonRegistry = new Map<number, HTMLButtonElement>();
+let activeButtonId: number | undefined = undefined;
+const buttonRegistry = new Map<number, RegistryEntry>();
 const generateButtonId = () => lastUsedButtonId++;
+
+const getActiveButton = (): HTMLButtonElement | undefined =>
+	activeButtonId === undefined
+		? undefined
+		: buttonRegistry.get(activeButtonId)?.button;
+
+const getActiveVideo = (): HTMLVideoElement | undefined =>
+	activeButtonId === undefined
+		? undefined
+		: buttonRegistry.get(activeButtonId)?.video;
 
 const getScreencapVideo = async () => {
 	if (globalScreencapVideo) return globalScreencapVideo;
@@ -67,6 +77,17 @@ const getBlob = (canvas: HTMLCanvasElement) =>
 			resolve(blob);
 		}),
 	);
+
+const getSettings = async (
+	video: HTMLVideoElement,
+): Promise<[number, boolean]> => {
+	const siteName = window.location.hostname;
+	const [layersUp, forcedMethod] = await getStoredSiteSettings(siteName);
+	return [
+		layersUp,
+		forcedMethod ?? video.src.includes(window.location.hostname),
+	];
+};
 
 const moveVideo = (video: HTMLVideoElement) => {
 	const originalControls = video.controls;
@@ -108,12 +129,7 @@ export const addButtonToVideo = async (video: HTMLVideoElement) => {
 	const buttonId = generateButtonId();
 	video.dataset.ebetshotButtonId = buttonId.toString();
 
-	const siteName = window.location.hostname;
-	const [layersUp, forcedMethod] = await getStoredSiteSettings(siteName);
-	const captureMethod =
-		forcedMethod ?? video.src.includes(window.location.hostname)
-			? captureScreenshotSameSite
-			: captureScreenshotCrossSite;
+	const [layersUp, sameSite] = await getSettings(video);
 
 	/* find the container of the video n elements up */
 	let container: HTMLElement = video;
@@ -129,20 +145,24 @@ export const addButtonToVideo = async (video: HTMLVideoElement) => {
 	const button = createButton();
 	button.onclick = event => {
 		event.stopPropagation();
-		activeButton = button;
-		captureMethod(video)
-			.then(blob => console.log('Screenshot copied to clipboard!', blob))
+		activeButtonId = buttonId;
+		captureScreenshot(video, sameSite)
+			.then(blob => {
+				putInClipboard(blob);
+				console.log('Screenshot copied to clipboard!', blob);
+			})
 			.catch(err => console.log(`Could not screenshot because ${err}`));
 	};
 	container.insertBefore(button, container.firstChild);
-	buttonRegistry.set(buttonId, button);
+	buttonRegistry.set(buttonId, { button, video });
+
+	/* interacting with the video makes its button the active one */
+	video.onclick = () => (activeButtonId = buttonId);
 
 	/* the first video that loads on the page becomes the active button */
-	if (activeButton === undefined) {
-		activeButton = button;
+	if (activeButtonId === undefined) {
+		activeButtonId = buttonId;
 	}
-	/* also interacting with the video makes its button the active one */
-	video.onclick = () => (activeButton = button);
 
 	console.log('Button added to video', video);
 };
@@ -153,13 +173,14 @@ const removeButtonFromVideo = (video: HTMLVideoElement) => {
 
 	delete video.dataset.ebetshotButtonId;
 
-	const button = buttonRegistry.get(+buttonId);
+	const entry = buttonRegistry.get(+buttonId);
 	buttonRegistry.delete(+buttonId);
+	if (+buttonId === activeButtonId) activeButtonId = undefined;
 
-	button?.remove();
-	if (button === activeButton) activeButton = undefined;
-
-	console.log('Removed button', button);
+	if (entry !== undefined) {
+		entry.button.remove();
+		console.log('Removed button', entry.button);
+	}
 };
 
 const getBounds = (
@@ -202,7 +223,7 @@ const getStoredSiteSettings = (
 const getShowButton = () =>
 	shared.retrieveStorage('show').then(({ show }) => show);
 
-const videoToClipboard = async (
+const videoToBlob = async (
 	video: HTMLVideoElement,
 	offsetX: number,
 	offsetY: number,
@@ -238,13 +259,22 @@ const videoToClipboard = async (
 		finalHeight,
 	);
 
-	const blob = await getBlob(canvas);
-	await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
-
-	return blob;
+	return getBlob(canvas);
 };
 
-const captureScreenshotCrossSite = async (video: HTMLVideoElement) => {
+const putInClipboard = async (blob: Blob) => {
+	await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+};
+
+const captureScreenshot = async (
+	video: HTMLVideoElement,
+	sameSite: boolean,
+) => {
+	/* no fancy tricks required, capture directly from source video */
+	if (sameSite)
+		return videoToBlob(video, 0, 0, video.videoWidth, video.videoHeight);
+
+	/* bypass required */
 	const screencapVideo = await getScreencapVideo();
 	const [oldParent, oldControls] = moveVideo(video);
 	document.body.requestPointerLock();
@@ -259,7 +289,7 @@ const captureScreenshotCrossSite = async (video: HTMLVideoElement) => {
 			video.videoWidth / video.videoHeight,
 		);
 
-		return videoToClipboard(screencapVideo, x, y, w, h);
+		return videoToBlob(screencapVideo, x, y, w, h);
 	} finally {
 		document.exitPointerLock();
 		returnVideo(video, oldParent, oldControls);
@@ -267,22 +297,47 @@ const captureScreenshotCrossSite = async (video: HTMLVideoElement) => {
 	}
 };
 
-const captureScreenshotSameSite = async (video: HTMLVideoElement) =>
-	videoToClipboard(video, 0, 0, video.videoWidth, video.videoHeight);
-
 const showHideButtons = (show: boolean) => {
 	setCssVar('buttonDisplay', show ? 'block' : 'none');
 };
 
+const blobToString = (blob: Blob) =>
+	new Promise<string>((acc, rej) => {
+		var reader = new FileReader();
+		reader.onerror = () => rej();
+		reader.onload = () => acc(reader.result as string);
+		reader.readAsDataURL(blob);
+	});
+
 /* ENTRY POINT */
 
-chrome.runtime.onMessage.addListener((message: shared.EbetshotMessage) => {
-	if (message.name === shared.MESSAGE_SHOW) {
-		showHideButtons(message.value);
-	} else if (message.name === shared.MESSAGE_SCREENSHOT) {
-		activeButton?.click();
-	}
-});
+chrome.runtime.onMessage.addListener(
+	(
+		message: shared.EbetshotMessage,
+		_,
+		sendResponse: (message: shared.EbetshotMessage) => void,
+	) => {
+		if (message.name === shared.MESSAGE_SHOW) {
+			showHideButtons(message.value);
+		} else if (message.name === shared.MESSAGE_SCREENSHOT) {
+			getActiveButton()?.click();
+		} else if (message.name === shared.MESSAGE_SCREENSHOT_DATA) {
+			const video = getActiveVideo();
+			if (video === undefined) return sendResponse({ name: 'none' });
+
+			getSettings(video)
+				.then(([, sameSite]) => sameSite)
+				.then(sameSite => captureScreenshot(video, sameSite))
+				.then(blob => blobToString(blob))
+				.then(passable =>
+					sendResponse({ name: 'data', value: passable }),
+				)
+				.catch(() => sendResponse({ name: 'error' }));
+
+			return true;
+		}
+	},
+);
 
 /**
  * the mutated elements fall under the tree of a parent element,

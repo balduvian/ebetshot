@@ -5,24 +5,15 @@
 	"manifest_version": 3,
 	"content_scripts": [
 		{
-			"matches": [
-				"https://*/*"
-			],
-			"css": [
-				"content.css"
-			],
-			"js": [
-				"content.js"
-			]
+			"matches": ["https://*/*"],
+			"css": ["content.css"],
+			"js": ["content.js"]
 		}
 	],
 	"background": {
 		"service_worker": "background.js"
 	},
-	"permissions": [
-		"storage",
-		"activeTab"
-	],
+	"permissions": ["storage", "activeTab", "tabs"],
 	"action": {
 		"default_popup": "popup.html",
 		"default_icon": {
@@ -43,5 +34,8 @@
 			"suggested_key": "Ctrl+P",
 			"description": "Take a screenshot"
 		}
+	},
+	"externally_connectable": {
+		"matches": ["*://localhost/*"]
 	}
 }

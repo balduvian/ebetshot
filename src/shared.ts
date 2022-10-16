@@ -22,11 +22,12 @@ export const METHOD_CROSS_SITE = false;
 
 export type EbetshotMessage = {
 	name: string;
-	value: any;
+	value?: any;
 };
 
 export const MESSAGE_SHOW = 'show';
 export const MESSAGE_SCREENSHOT = 'screenshot';
+export const MESSAGE_SCREENSHOT_DATA = 'screenshotData';
 
 export type ChromeStorage = {
 	show: boolean;
