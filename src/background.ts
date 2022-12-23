@@ -17,14 +17,31 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import browser from 'webextension-polyfill';
+
 import * as shared from './shared';
 
-chrome.commands.onCommand.addListener(async (command, tab) => {
-	if (command === 'takeScreenshot' && tab.id !== undefined) {
-		chrome.tabs.sendMessage(tab.id, {
-			name: shared.MESSAGE_SCREENSHOT,
-			value: undefined,
-		});
+console.log('Ebetshot background script');
+
+browser.commands
+	.getAll()
+	.then(commands => commands.forEach(command => console.log(command)));
+
+const getActiveTab = () =>
+	browser.tabs
+		.query({ active: true, windowId: browser.windows.WINDOW_ID_CURRENT })
+		.then(tabs => tabs[0]);
+
+browser.commands.onCommand.addListener(command => {
+	if (command === 'takeScreenshot') {
+		getActiveTab().then(
+			tab =>
+				tab.id !== undefined &&
+				browser.tabs.sendMessage(tab.id, {
+					name: shared.MESSAGE_SCREENSHOT,
+					value: undefined,
+				}),
+		);
 	}
 });
 
@@ -37,24 +54,23 @@ const validateMessage = (message: any): message is shared.EbetshotMessage => {
 
 const unknownCommand = () => ({ name: 'unknownCommand', value: undefined });
 
-chrome.runtime.onMessageExternal.addListener(
-	async (request, _, sendResponse) => {
-		if (!validateMessage(request)) return sendResponse(unknownCommand());
+browser.runtime.onMessageExternal.addListener(async request => {
+	if (!validateMessage(request)) return unknownCommand();
 
-		if (request.name === 'takeScreenshot') {
-			const activeTabs = await chrome.tabs.query({ active: true });
+	if (request.name === 'takeScreenshot') {
+		const activeTabs = await browser.tabs.query({ active: true });
 
-			const responses = await Promise.all(
-				activeTabs.map(tab => {
-					const id = tab.id;
-					if (id === undefined) return Promise.resolve(undefined);
-					return new Promise<string | undefined>(acc =>
-						chrome.tabs.sendMessage(
-							id,
-							{
-								name: shared.MESSAGE_SCREENSHOT_DATA,
-								value: undefined,
-							},
+		const responses = await Promise.all(
+			activeTabs.map(tab => {
+				const id = tab.id;
+				if (id === undefined) return Promise.resolve(undefined);
+				return new Promise<string | undefined>(acc =>
+					browser.tabs
+						.sendMessage(id, {
+							name: shared.MESSAGE_SCREENSHOT_DATA,
+							value: undefined,
+						})
+						.then(
 							(response: shared.EbetshotMessage | undefined) => {
 								acc(
 									response === undefined
@@ -63,20 +79,19 @@ chrome.runtime.onMessageExternal.addListener(
 								);
 							},
 						),
-					);
-				}),
-			);
+				);
+			}),
+		);
 
-			const foundBlob = responses.find(
-				(value): value is string => value !== undefined,
-			);
+		const foundBlob = responses.find(
+			(value): value is string => value !== undefined,
+		);
 
-			sendResponse({
-				name: 'data',
-				value: foundBlob,
-			});
-		} else {
-			sendResponse(unknownCommand());
-		}
-	},
-);
+		return {
+			name: 'data',
+			value: foundBlob,
+		};
+	} else {
+		return unknownCommand();
+	}
+});

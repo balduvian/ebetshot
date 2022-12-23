@@ -17,6 +17,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import browser from 'webextension-polyfill';
+
 export const METHOD_SAME_SITE = true;
 export const METHOD_CROSS_SITE = false;
 
@@ -29,7 +31,7 @@ export const MESSAGE_SHOW = 'show';
 export const MESSAGE_SCREENSHOT = 'screenshot';
 export const MESSAGE_SCREENSHOT_DATA = 'screenshotData';
 
-export type ChromeStorage = {
+export type EbetshotStorage = {
 	show: boolean;
 	fix: boolean;
 	aspectW: number;
@@ -39,7 +41,7 @@ export type ChromeStorage = {
 	forcedMethod: { [site: string]: boolean };
 };
 
-export const defaultStorage = (): ChromeStorage => ({
+export const defaultStorage = (): EbetshotStorage => ({
 	show: true,
 	fix: true,
 	aspectW: 16,
@@ -60,8 +62,8 @@ export const defaultStorage = (): ChromeStorage => ({
 const defaultStorageInst = defaultStorage();
 
 export const defaultStoragePart = (
-	...keys: (keyof ChromeStorage)[]
-): Partial<ChromeStorage> => {
+	...keys: (keyof EbetshotStorage)[]
+): Partial<EbetshotStorage> => {
 	const obj: { [key: string]: any } = {};
 
 	for (const key of keys) {
@@ -72,11 +74,11 @@ export const defaultStoragePart = (
 };
 
 export const retrieveStorage = (
-	...keys: (keyof ChromeStorage)[]
-): Promise<Pick<ChromeStorage, typeof keys[number]>> =>
-	chrome.storage.sync
+	...keys: (keyof EbetshotStorage)[]
+): Promise<Pick<EbetshotStorage, typeof keys[number]>> =>
+	browser.storage.sync
 		.get(defaultStoragePart(...keys))
-		.then(results => results as Pick<ChromeStorage, typeof keys[number]>);
+		.then(results => results as Pick<EbetshotStorage, typeof keys[number]>);
 
 /* util functions */
 

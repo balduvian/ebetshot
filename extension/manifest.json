@@ -1,7 +1,12 @@
 {
 	"name": "Ebetshot",
+	"browser_specific_settings": {
+		"gecko": {
+			"id": "ebetshot@gaseumlabs.org"
+		}
+	},
 	"description": "Copy screenshots of videos directly to your clipboard",
-	"version": "1.2.4",
+	"version": "1.2.5",
 	"manifest_version": 3,
 	"content_scripts": [
 		{
@@ -11,7 +16,7 @@
 		}
 	],
 	"background": {
-		"service_worker": "background.js"
+		"scripts": ["background.js"]
 	},
 	"permissions": ["storage", "activeTab", "tabs"],
 	"action": {
@@ -31,7 +36,7 @@
 	},
 	"commands": {
 		"takeScreenshot": {
-			"suggested_key": "Ctrl+P",
+			"suggested_key": { "default": "Ctrl+E" },
 			"description": "Take a screenshot"
 		}
 	},

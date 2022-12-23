@@ -17,6 +17,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import browser from 'webextension-polyfill';
+
 import * as shared from './shared';
 import { funErr, wait } from './shared';
 import icon from './icon.svg';
@@ -262,6 +264,9 @@ const videoToBlob = async (
 	return getBlob(canvas);
 };
 
+// TODO check is ClipboardItem could be created
+// firefox: dom.events.asyncClipboard.clipboardItem in about:config
+
 const putInClipboard = async (blob: Blob) => {
 	await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
 };
@@ -311,33 +316,23 @@ const blobToString = (blob: Blob) =>
 
 /* ENTRY POINT */
 
-chrome.runtime.onMessage.addListener(
-	(
-		message: shared.EbetshotMessage,
-		_,
-		sendResponse: (message: shared.EbetshotMessage) => void,
-	) => {
-		if (message.name === shared.MESSAGE_SHOW) {
-			showHideButtons(message.value);
-		} else if (message.name === shared.MESSAGE_SCREENSHOT) {
-			getActiveButton()?.click();
-		} else if (message.name === shared.MESSAGE_SCREENSHOT_DATA) {
-			const video = getActiveVideo();
-			if (video === undefined) return sendResponse({ name: 'none' });
+browser.runtime.onMessage.addListener((message: shared.EbetshotMessage) => {
+	if (message.name === shared.MESSAGE_SHOW) {
+		showHideButtons(message.value);
+	} else if (message.name === shared.MESSAGE_SCREENSHOT) {
+		getActiveButton()?.click();
+	} else if (message.name === shared.MESSAGE_SCREENSHOT_DATA) {
+		const video = getActiveVideo();
+		if (video === undefined) return Promise.resolve({ name: 'none' });
 
-			getSettings(video)
-				.then(([, sameSite]) => sameSite)
-				.then(sameSite => captureScreenshot(video, sameSite))
-				.then(blob => blobToString(blob))
-				.then(passable =>
-					sendResponse({ name: 'data', value: passable }),
-				)
-				.catch(() => sendResponse({ name: 'error' }));
-
-			return true;
-		}
-	},
-);
+		return getSettings(video)
+			.then(([, sameSite]) => sameSite)
+			.then(sameSite => captureScreenshot(video, sameSite))
+			.then(blob => blobToString(blob))
+			.then(passable => ({ name: 'data', value: passable }))
+			.catch(() => ({ name: 'error' }));
+	}
+});
 
 /**
  * the mutated elements fall under the tree of a parent element,

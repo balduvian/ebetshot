@@ -17,6 +17,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import browser from 'webextension-polyfill';
+
 import * as preact from 'preact';
 import * as shared from './shared';
 
@@ -43,8 +45,8 @@ const defaultState = (): PopupState => ({
 const stateFromStorage = (): Promise<PopupState> => {
 	const queryObject = shared.defaultStorage();
 
-	return chrome.storage.sync.get(queryObject).then(resultObject => {
-		const storage = resultObject as shared.ChromeStorage;
+	return browser.storage.sync.get(queryObject).then(resultObject => {
+		const storage = resultObject as shared.EbetshotStorage;
 
 		return {
 			show: storage.show,
@@ -56,15 +58,15 @@ const stateFromStorage = (): Promise<PopupState> => {
 	});
 };
 
-const openTab = (url: string) => chrome.tabs.create({ url: url });
+const openTab = (url: string) => browser.tabs.create({ url: url });
 
 class Popup extends preact.Component<{}, PopupState> {
-	previousStorage: preact.RefObject<Partial<shared.ChromeStorage>>;
+	previousStorage: preact.RefObject<Partial<shared.EbetshotStorage>>;
 
 	constructor() {
 		super();
 
-		this.previousStorage = preact.createRef<shared.ChromeStorage>();
+		this.previousStorage = preact.createRef<shared.EbetshotStorage>();
 		this.state = defaultState();
 
 		stateFromStorage().then(state => {
@@ -77,7 +79,9 @@ class Popup extends preact.Component<{}, PopupState> {
 		});
 	}
 
-	calculateStorage = (state: PopupState): Partial<shared.ChromeStorage> => ({
+	calculateStorage = (
+		state: PopupState,
+	): Partial<shared.EbetshotStorage> => ({
 		show: state.show,
 		fix: state.fix,
 		aspectW: state.width,
@@ -86,15 +90,15 @@ class Popup extends preact.Component<{}, PopupState> {
 	});
 
 	onStorageChange = <T,>(
-		field: KeyOfType<shared.ChromeStorage, T>,
+		field: KeyOfType<shared.EbetshotStorage, T>,
 		newValue: T,
 	) => {
 		if (field === 'show') {
-			chrome.tabs.query({}).then(tabs =>
+			browser.tabs.query({}).then(tabs =>
 				tabs.forEach(
 					tab =>
 						tab.id !== undefined &&
-						chrome.tabs.sendMessage(tab.id, {
+						browser.tabs.sendMessage(tab.id, {
 							name: shared.MESSAGE_SHOW,
 							value: newValue,
 						}),
@@ -112,22 +116,22 @@ class Popup extends preact.Component<{}, PopupState> {
 
 			for (const [key, newValue] of Object.entries(newStorage)) {
 				if (
-					oldStorage[key as keyof shared.ChromeStorage] !== newValue
+					oldStorage[key as keyof shared.EbetshotStorage] !== newValue
 				) {
 					uploadObject[key] = newValue;
 				}
 			}
 
-			chrome.storage.sync.set(uploadObject).then(() => {
+			browser.storage.sync.set(uploadObject).then(() => {
 				for (const [key, newValue] of Object.entries(uploadObject)) {
 					this.onStorageChange(
-						key as keyof shared.ChromeStorage,
+						key as keyof shared.EbetshotStorage,
 						newValue,
 					);
 				}
 			});
 
-			Object.assign(this.previousStorage.current, newStorage);
+			Object.assign(oldStorage, newStorage);
 		}
 	}
 
@@ -241,7 +245,6 @@ class Popup extends preact.Component<{}, PopupState> {
 							openTab('chrome://extensions/shortcuts'),
 					},
 				])}
-				{textOption('Have fun immersing!', reminderStyle)}
 				<a
 					onClick={() =>
 						openTab('https://github.com/balduvian/ebetshot')
