@@ -1,6 +1,7 @@
 {
 	"dependencies": {
 		"@types/webextension-polyfill": "^0.9.2",
+		"copy-webpack-plugin": "^11.0.0",
 		"preact": "^10.6.4",
 		"svg-inline-loader": "^0.8.2",
 		"ts-loader": "^9.2.6",

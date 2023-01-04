@@ -61,27 +61,22 @@ browser.runtime.onMessageExternal.addListener(async request => {
 		const activeTabs = await browser.tabs.query({ active: true });
 
 		const responses = await Promise.all(
-			activeTabs.map(tab => {
+			activeTabs.map(async tab => {
 				const id = tab.id;
-				if (id === undefined) return Promise.resolve(undefined);
-				return new Promise<string | undefined>(acc =>
-					browser.tabs
-						.sendMessage(id, {
-							name: shared.MESSAGE_SCREENSHOT_DATA,
-							value: undefined,
-						})
-						.then(
-							(response: shared.EbetshotMessage | undefined) => {
-								acc(
-									response === undefined
-										? undefined
-										: response.value,
-								);
-							},
-						),
-				);
+				if (id === undefined) return undefined;
+				try {
+					const response = await browser.tabs.sendMessage(id, {
+						name: shared.MESSAGE_SCREENSHOT_DATA,
+						value: undefined,
+					});
+					return response === undefined ? undefined : response.value;
+				} catch {
+					return undefined;
+				}
 			}),
 		);
+
+		console.log('responses', responses);
 
 		const foundBlob = responses.find(
 			(value): value is string => value !== undefined,

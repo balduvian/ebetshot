@@ -4,7 +4,7 @@
 
 A video screenshot extension for Chrome.
 
-Bug me on discord if you encounter any issues.
+Bug me on discord if you encounter any issues @balduvian#2226.
 
 ## Get the Chrome Extension
 
@@ -28,10 +28,12 @@ Click on "Load unpacked" and navigate the the extracted folder. Then click "Sele
 
 Ebetshot should now appear in your extensions list!
 
-## Note for Netflix
+## Firefox Compatibility
 
-Netflix tries to prevent screenshotting. To get around this, the extension will instead ask for you to share your screen. For the best results, please choose "Chrome Tab" then find the tab the video is on in the screen share popup. When screenshotting in this mode, you will notice the background of the page become black for a split second. This mode is also used when videos come from a cross origin site. An example is https://www.languagereactor.com/, where the videos come from Youtube.
+Ebetshot now has tenuous Firefox compatibility. Not all features are guaranteed to work, and this is definitely a work in progress. Note that the extension in Firefox is still manifest v3, therefore it can only be used with Firefox Developer Edition.
 
-Netflix is volatile and may change the way their website works at any moment. When they do, this may break Ebetshot for a while until it can be updated.
+## Building from source
 
-Also of note is that chrome behaves erratically with screenshare sometimes. On netflix you may encounter a pink-screen when screenshare becomes enabled. If this happens, just try to play the video and the issue should resolve itself. Other times I've experienced the whole chrome window flashing for a few seconds before returning to normal.
+Use the `webpack` command in the project directory.
+
+If you want to build for Firefox, instead use `webpack --env=firefox`.
